@@ -4,14 +4,23 @@ library(lubridate)
 library(sweep)
 library(tidyverse)
 
+# Hyper parameters
+hyper.begin <- 1
+hyper.freq <- 7
+
 data <- read.csv('kanpur.csv')
-data.begin <- ymd(data$Date[1])
+data.begin <- ymd(data$Date[hyper.begin])
 data.end <- ymd(data$Date[nrow(data)])
 summary(data)
 
+# Active cases by day
+data$active <- data$Confirmed - data$Recovered - data$Deceased
+data.current <- data$active[hyper.begin:nrow(data)]
+
 # Convert into a time series with weekly period
-data.ts.dsc <- tk_ts(data$Deceased, frequency=7, start=data.begin)
-autoplot(decompose(data.ts.dsc)) + ggtitle("Decomposition")
+data.ts.dsc <- tk_ts(data$Confirmed, frequency=hyper.freq, start=data.begin)
+data.ts.stat <- data.ts.dsc
+autoplot(decompose(data.ts.stat)) + ggtitle("Decomposition")
 
 # Utility functions:
 rmse <- function(t, o) { sqrt(mean((t-o)^2)) }
@@ -45,9 +54,9 @@ res_mtab <- function(res) {
 }
 # Training Testing & Tuning
 # Creating training & testing data 80/20 split
-data.train <- tk_ts(data.ts.dsc[1:round(length(data.ts.dsc) * 0.8)], frequency=7, start=data.begin)
+data.train <- tk_ts(data.ts.stat[1:floor(length(data.ts.stat) * 0.8)], frequency=hyper.freq, start=data.begin)
 data.train.size <- length(data.train)
-data.test <- tk_ts(rm_na(data.ts.dsc[length(data.train)+1:length(data.ts.dsc)]), frequency=7, start=data.begin)
+data.test <- tk_ts(rm_na(data.ts.stat[-c(1:length(data.train))]), frequency=hyper.freq, start=data.begin)
 data.test.size <- length(data.test)
 
 # ARIMA model
